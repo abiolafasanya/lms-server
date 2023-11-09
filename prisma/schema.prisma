@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TUTOR
+  STUDENT
+  GUEST
+}
+
+model User {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  password    String?
+  image       String?
+  username    String?      @unique
+  avatar      String?
+  name        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  role        UserRole     @default(STUDENT)
+  comments    Comment[]
+  courses     Course[]
+  grades      Grade[]
+  posts       Post[]
+  tasks       Task[]
+  submissions Submission[]
+  track       Track[]
+}
+
+model Track {
+  id   String @id @default(uuid())
+  name String
+
+  tasks  Task[]
+  userId String?
+  User   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Resource {
+  id    Int    @id @default(autoincrement())
+  name  String
+  tasks Task[]
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  userId      String
+  title       String
+  description String
+  resources   Resource[]
+  point       Int
+  deadline    DateTime
+  isFile      Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Course      Course?      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId    String?
+  Track       Track?       @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId     String?
+  Grade       Grade?       @relation(fields: [gradeId], references: [id])
+  gradeId     String?
+
+  @@index([userId])
+  @@index([trackId])
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  userId      String
+  taskId      String
+  attachment  String
+  track       String   @default("general")
+  submittedAt DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  grade       Grade?   @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeId     String?
+
+  @@index([taskId])
+  @@index([userId])
+}
+
+model Grade {
+  id           String       @id @default(uuid())
+  userId       String
+  submissionId String
+  graded       Boolean      @default(false)
+  score        Int
+  regraded     Boolean?     @default(false)
+  feedback     String       @default("You have been graded!")
+  User         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Task         Task[]
+  Submission   Submission[]
+
+  @@index([userId])
+}
+
+model Question {
+  id           String      @id @default(uuid())
+  assessmentId String
+  question     String
+  option1      String
+  option2      String
+  option3      String
+  option4      String
+  answer       String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  Assessment   Assessment? @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@index([assessmentId])
+}
+
+model Assessment {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+}
+
+model Post {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String?
+  body      String?
+  tags      Tag[]
+  image     String?
+  published Boolean?  @default(false)
+  comments  Comment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  tag   String
+  posts Post[]
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  postId    String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([postId])
+}
+
+model Course {
+  id           String        @id @default(uuid())
+  userId       String
+  title        String
+  description  String
+  requirements Requirement[]
+  coverImage   String?
+  categoryId   String?
+  modules      Module[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Task         Task[]
+  Category     Category?     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([categoryId])
+}
+
+model Requirement {
+  id       String @id @default(uuid())
+  name     String
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id])
+}
+
+model Category {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  courses Course[]
+}
+
+model Module {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  courseId    String
+  lessons     Lesson[]
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  media     String?
+  files     File[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  module   Module? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  moduleId String?
+}
+
+model File {
+  id      String   @id @default(uuid())
+  name    String
+  lessons Lesson[]
+}
